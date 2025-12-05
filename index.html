@@ -49,7 +49,6 @@
             box-shadow: 0 0 25px #7f00ff55;
         }
 
-        /* BOTÃO NEON */
         .btn-neon {
             background: linear-gradient(90deg, #7f00ff, #005eff);
             color: white;
@@ -125,14 +124,11 @@
         </div>
     </div>
 
-    <!-- RESULTADOS -->
     <h2 class="text-2xl mt-10 mb-4 text-[#ba86ff] font-bold">Log de Processamento e Saída:</h2>
-
     <div id="translatedResults" class="space-y-4">
         <div class="p-4 result-box text-[#a3a3ff]">STATUS: Pronto para iniciar.</div>
     </div>
 
-    <!-- ENGINE INFO -->
     <p class="text-xs text-[#8f7cff] mt-10 opacity-70">
         Engine: Google Translate API (Chunking Ilimitado).
     </p>
@@ -155,13 +151,32 @@ const LANGUAGE_NAMES = {
     vi: "Vietnamita"
 };
 
-const sourceTextarea = document.getElementById("sourceText");
-const translateButton = document.getElementById("translateButton");
-const downloadAllButton = document.getElementById("downloadAllButton");
-const messageBox = document.getElementById("messageBox");
-const translatedResultsDiv = document.getElementById("translatedResults");
+let glossary = {};
 
-let completedTranslations = {};
+async function loadGlossary() {
+    try {
+        const response = await fetch("glossario.json");
+        glossary = await response.json();
+        console.log("Glossário carregado:", glossary);
+    } catch (e) {
+        console.error("Erro ao carregar glossário:", e);
+    }
+}
+
+loadGlossary();
+
+function applyGlossary(text, targetLang) {
+    if (!glossary[targetLang]) return text;
+
+    let corrected = text;
+
+    for (const item of glossary[targetLang]) {
+        const pattern = new RegExp("\\b" + item.pt + "\\b", "gi");
+        corrected = corrected.replace(pattern, item[targetLang]);
+    }
+
+    return corrected;
+}
 
 function splitText(text, max_len) {
     const chunks = [];
@@ -182,39 +197,28 @@ function splitText(text, max_len) {
 
 async function translateChunk(chunk, lang) {
     const encoded = encodeURIComponent(chunk);
-    const url =
+    const url = 
         `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encoded}`;
 
     const res = await fetch(url);
     const data = await res.json();
 
-    return data[0].map(s => s[0]).join("");
+    let translated = data[0].map(s => s[0]).join("");
+    translated = applyGlossary(translated, lang);
+
+    return translated;
 }
 
-function getFriendlyFilename(lang) {
-    return `Traducao_${LANGUAGE_NAMES[lang]}`;
-}
+const sourceTextarea = document.getElementById("sourceText");
+const translateButton = document.getElementById("translateButton");
+const downloadAllButton = document.getElementById("downloadAllButton");
+const messageBox = document.getElementById("messageBox");
+const translatedResultsDiv = document.getElementById("translatedResults");
 
-async function downloadAllAsZip() {
-    downloadAllButton.textContent = "Gerando ZIP...";
-    downloadAllButton.disabled = true;
-
-    const zip = new JSZip();
-
-    for (const lang in completedTranslations) {
-        zip.file(getFriendlyFilename(lang) + ".txt", completedTranslations[lang].content);
-    }
-
-    const blob = await zip.generateAsync({ type: "blob" });
-    saveAs(blob, "Traducoes_Roteiro.zip");
-
-    downloadAllButton.textContent = "Baixar Tudo (ZIP)";
-    downloadAllButton.disabled = false;
-}
-
-downloadAllButton.onclick = downloadAllAsZip;
+let completedTranslations = {};
 
 translateButton.onclick = translateScript;
+downloadAllButton.onclick = downloadAllAsZip;
 
 async function translateScript() {
 
@@ -275,6 +279,23 @@ async function translateScript() {
     messageBox.textContent = "Tradução concluída!";
     translateButton.disabled = false;
     translateButton.textContent = "Traduzir Roteiro";
+    downloadAllButton.disabled = false;
+}
+
+async function downloadAllAsZip() {
+    downloadAllButton.textContent = "Gerando ZIP...";
+    downloadAllButton.disabled = true;
+
+    const zip = new JSZip();
+
+    for (const lang in completedTranslations) {
+        zip.file(`Traducao_${LANGUAGE_NAMES[lang]}.txt`, completedTranslations[lang].content);
+    }
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    saveAs(blob, "Traducoes_Roteiro.zip");
+
+    downloadAllButton.textContent = "Baixar Tudo (ZIP)";
     downloadAllButton.disabled = false;
 }
 
