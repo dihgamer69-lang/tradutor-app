@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tradutor de Roteiros — Cyber Matrix</title>
 
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- ZIP libs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
@@ -68,6 +71,13 @@
             background: rgba(0, 0, 30, 0.45);
             border: 1px solid #5f00ff;
         }
+
+        progress::-webkit-progress-value {
+            background: #7f00ff;
+        }
+        progress::-moz-progress-bar {
+            background: #7f00ff;
+        }
     </style>
 </head>
 
@@ -115,98 +125,12 @@
         <div class="p-4 result-box text-[#a3a3ff]">STATUS: Pronto para iniciar.</div>
     </div>
 
-    <p class="text-xs text-[#8f7cff] mt-10 opacity-70">Engine: Google Translate API (Chunking Ilimitado).</p>
+    <p class="text-xs text-[#8f7cff] mt-10 opacity-70">
+        Engine: Google Translate API (Chunking Ilimitado).
+    </p>
 
-
-<!-- ========================================================= -->
-<!--   SCRIPT CORRIGIDO COM GLOSSÁRIO 100% FUNCIONAL           -->
-<!-- ========================================================= -->
 <script>
-
-// ================================
-// 1) CARREGAR GLOSSÁRIO
-// ================================
-let glossary = {};
-
-async function loadGlossary() {
-    const res = await fetch("glossario.json");
-    glossary = await res.json();
-}
-loadGlossary();
-
-
-// ================================
-// 2) PROTEGER TERMOS DO GLOSSÁRIO
-// ================================
-function protectGlossary(text) {
-    let output = text;
-
-    for (const termoPT in glossary) {
-        const regex = new RegExp("\\b" + termoPT + "\\b", "gi");
-        output = output.replace(regex, `{{${termoPT}}}`);
-    }
-
-    return output;
-}
-
-
-// ================================
-// 3) RESTAURAR TERMOS APÓS TRADUÇÃO
-// ================================
-function restoreGlossary(text, lang) {
-    return text.replace(/\{\{([^}]+)\}\}/g, (match, termoPT) => {
-        return glossary[termoPT]?.[lang] || glossary[termoPT]?.["en"] || termoPT;
-    });
-}
-
-
-// ================================
-// 4) DIVIDIR TEXTO
-// ================================
-function splitText(text, max) {
-    const chunks = [];
-    let cur = text.trim();
-
-    while (cur.length > max) {
-        let idx = cur.lastIndexOf(".", max);
-        if (idx === -1) idx = cur.lastIndexOf(" ", max);
-        if (idx === -1) idx = max;
-
-        chunks.push(cur.substring(0, idx).trim());
-        cur = cur.substring(idx).trim();
-    }
-
-    if (cur) chunks.push(cur);
-
-    return chunks;
-}
-
-
-// ================================
-// 5) TRADUZIR CHUNK COM PROTEÇÃO
-// ================================
-async function translateChunk(chunk, lang) {
-
-    const protegido = protectGlossary(chunk);
-
-    const url = 
-      "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" +
-      lang + "&dt=t&q=" + encodeURIComponent(protegido);
-
-    const res = await fetch(url);
-    const data = await res.json();
-
-    let traducao = data[0].map(x => x[0]).join("");
-
-    traducao = restoreGlossary(traducao, lang);
-
-    return traducao;
-}
-
-
-// ================================
-// 6) TRADUZIR SCRIPT COMPLETO
-// ================================
+let glossario = {};
 const MAX_CHUNK_SIZE = 4500;
 
 const LANGUAGE_NAMES = {
@@ -215,38 +139,106 @@ const LANGUAGE_NAMES = {
     pl: "Polonês", tr: "Turco", vi: "Vietnamita"
 };
 
+async function loadGlossary() {
+    const response = await fetch("glossario.json");
+    glossario = await response.json();
+}
+loadGlossary();
+
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function protectGlossaryTerms(text) {
+    let result = text;
+    for (const termoPT in glossario) {
+        const regex = new RegExp("\\b" + escapeRegex(termoPT) + "\\b", "gi");
+        result = result.replace(regex, `{{${termoPT}}}`);
+    }
+    return result;
+}
+
+function applyGlossarioFinal(text, lang) {
+    for (const termoPT in glossario) {
+        const traducao = glossario[termoPT][lang];
+        if (!traducao) continue;
+
+        const regex = new RegExp("\\b" + escapeRegex(termoPT) + "\\b", "gi");
+        const regexTrad = new RegExp("\\b" + escapeRegex(traducao) + "\\b", "gi");
+
+        text = text.replace(regex, traducao);
+        text = text.replace(regexTrad, traducao);
+    }
+    return text;
+}
+
+function restoreGlossaryTerms(text, lang) {
+    return text.replace(/\{\{([^}]+)\}\}/g, (match, termoPT) => {
+        const entry = glossario[termoPT];
+        if (!entry) return termoPT;
+        return entry[lang] || entry["en"] || termoPT;
+    });
+}
+
+function splitText(text, max_len) {
+    const chunks = [];
+    let current = text.trim();
+
+    while (current.length > max_len) {
+        let idx = current.lastIndexOf(".", max_len);
+        if (idx === -1) idx = current.lastIndexOf(" ", max_len);
+        if (idx === -1) idx = max_len;
+
+        chunks.push(current.substring(0, idx).trim());
+        current = current.substring(idx).trim();
+    }
+    if (current) chunks.push(current);
+
+    return chunks;
+}
+
+async function translateChunk(chunk, lang) {
+    const protegido = protectGlossaryTerms(chunk);
+
+    const encoded = encodeURIComponent(protegido);
+    const url =
+        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encoded}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    let translated = data[0].map(s => s[0]).join("");
+
+    translated = restoreGlossaryTerms(translated, lang);
+    translated = applyGlossarioFinal(translated, lang);
+
+    return translated;
+}
+
+const sourceTextarea      = document.getElementById("sourceText");
+const translateButton     = document.getElementById("translateButton");
+const downloadAllButton   = document.getElementById("downloadAllButton");
+const messageBox          = document.getElementById("messageBox");
+const translatedResultsDiv= document.getElementById("translatedResults");
+
 let completedTranslations = {};
 
-const sourceTextarea = document.getElementById("sourceText");
-const translateButton = document.getElementById("translateButton");
-const downloadAllButton = document.getElementById("downloadAllButton");
-const translatedResultsDiv = document.getElementById("translatedResults");
-const messageBox = document.getElementById("messageBox");
-
-translateButton.onclick = translateScript;
+translateButton.onclick   = translateScript;
 downloadAllButton.onclick = downloadAllAsZip;
 
-
 async function translateScript() {
-
     const text = sourceTextarea.value.trim();
     const langs = [...document.querySelectorAll("input[type=checkbox]:checked")].map(cb => cb.value);
 
-    if (!text) {
-        messageBox.textContent = "Cole um roteiro antes.";
-        return;
-    }
-    if (langs.length === 0) {
-        messageBox.textContent = "Selecione ao menos um idioma.";
-        return;
-    }
+    if (!text) return messageBox.textContent = "Cole um roteiro antes.";
+    if (langs.length === 0) return messageBox.textContent = "Selecione pelo menos 1 idioma.";
 
     messageBox.textContent = "";
     translatedResultsDiv.innerHTML =
-      `<div class='p-4 result-box'>STATUS: Processando...</div>`;
+        `<div class='p-4 result-box text-[#a3a3ff]'>STATUS: Dividindo texto...</div>`;
 
+    translateButton.textContent = "EXECUTANDO...";
     translateButton.disabled = true;
-    translateButton.textContent = "TRADUZINDO...";
 
     completedTranslations = {};
 
@@ -256,7 +248,7 @@ async function translateScript() {
 
         translatedResultsDiv.innerHTML += `
             <div id="out-${lang}" class="result-box p-4 rounded">
-                <h3 class="text-[#d9b8ff] font-bold">${LANGUAGE_NAMES[lang]}</h3>
+                <h3 class="text-[#d9b8ff] font-bold">${LANGUAGE_NAMES[lang]} (${lang})</h3>
                 <div class="status">0%</div>
                 <progress id="pg-${lang}" class="w-full" value="0" max="${chunks.length}"></progress>
                 <pre class="content whitespace-pre-wrap mt-2"></pre>
@@ -267,18 +259,18 @@ async function translateScript() {
         const status = document.querySelector(`#out-${lang} .status`);
         const content = document.querySelector(`#out-${lang} .content`);
 
-        let resultado = "";
+        let result = "";
 
         for (let i = 0; i < chunks.length; i++) {
-            const traduzido = await translateChunk(chunks[i], lang);
-            resultado += traduzido + "\n\n";
+            const translated = await translateChunk(chunks[i], lang);
+            result += translated + "\n\n";
 
             bar.value = i + 1;
             status.textContent = `${Math.round(((i + 1) / chunks.length) * 100)}%`;
         }
 
-        content.textContent = resultado;
-        completedTranslations[lang] = { content: resultado };
+        content.textContent = result;
+        completedTranslations[lang] = { content: result };
     }
 
     messageBox.textContent = "Tradução concluída!";
@@ -287,13 +279,9 @@ async function translateScript() {
     downloadAllButton.disabled = false;
 }
 
-
-// ================================
-// 7) DOWNLOAD ZIP
-// ================================
 async function downloadAllAsZip() {
-    downloadAllButton.disabled = true;
     downloadAllButton.textContent = "Gerando ZIP...";
+    downloadAllButton.disabled = true;
 
     const zip = new JSZip();
 
@@ -307,7 +295,6 @@ async function downloadAllAsZip() {
     downloadAllButton.textContent = "Baixar Tudo (ZIP)";
     downloadAllButton.disabled = false;
 }
-
 </script>
 
 </body>
