@@ -1,138 +1,3 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tradutor de Roteiros — Cyber Matrix</title>
-
-    <!-- Tailwind -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- ZIP libs -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-
-    <style>
-        body {
-            background-color: #050009;
-            color: #cfc7ff;
-            font-family: "Courier New", monospace;
-            overflow-x: hidden;
-        }
-
-        /* MATRIZ CAINDO AO FUNDO */
-        body::before {
-            content: "01 10 01 110 001 010 110 010 110 001 110 010";
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            font-size: 22px;
-            line-height: 22px;
-            white-space: pre;
-            opacity: 0.15;
-            color: #7f00ff;
-            animation: matrixFall 18s linear infinite;
-            pointer-events: none;
-        }
-
-        @keyframes matrixFall {
-            0% { transform: translateY(-100%); opacity: 0.15; }
-            100% { transform: translateY(100%); opacity: 0.20; }
-        }
-
-        /* PAINEL CYBERPUNK */
-        .panel {
-            background: rgba(15, 0, 25, 0.55);
-            border: 1px solid #7f00ff;
-            box-shadow: 0 0 25px #7f00ff55;
-        }
-
-        .btn-neon {
-            background: linear-gradient(90deg, #7f00ff, #005eff);
-            color: white;
-            font-weight: bold;
-            border-radius: 8px;
-            padding: 12px;
-            box-shadow: 0 0 12px #7f00ffaa, 0 0 18px #005effaa inset;
-            transition: 0.15s;
-        }
-        .btn-neon:hover {
-            transform: scale(1.03);
-            box-shadow: 0 0 18px #7f00ffcc, 0 0 25px #005effcc inset;
-        }
-
-        textarea {
-            background: rgba(0, 0, 0, 0.65);
-            color: #d8caff;
-            border: 1px solid #7f00ff;
-        }
-
-        .result-box {
-            background: rgba(0, 0, 30, 0.45);
-            border: 1px solid #5f00ff;
-        }
-
-        progress::-webkit-progress-value {
-            background: #7f00ff;
-        }
-        progress::-moz-progress-bar {
-            background: #7f00ff;
-        }
-    </style>
-</head>
-
-<body class="p-6">
-
-    <h1 class="text-center text-4xl font-bold mb-2 text-[#9d5cff] drop-shadow-[0_0_10px_#7f00ff]">
-        Tradutor de Roteiros <span class="text-[#5f9dff]">(Modo Hacker Cyber Matrix)</span>
-    </h1>
-
-    <p class="text-center text-[#a5a5ff] mb-10">Tradução ilimitada com visual Matrix futurista roxo e azul neon.</p>
-
-    <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-
-        <!-- CONFIGURAÇÕES -->
-        <div class="panel p-6 rounded-xl">
-            <h2 class="text-xl font-bold text-[#c7a0ff] mb-4">Idiomas:</h2>
-
-            <div id="targetLangCheckboxes" class="grid grid-cols-2 gap-2 text-sm max-h-48 overflow-y-auto bg-black/30 p-2 border border-[#7f00ff] rounded-lg">
-                <label><input type="checkbox" value="en"> Inglês</label>
-                <label><input type="checkbox" value="es"> Espanhol</label>
-                <label><input type="checkbox" value="fr"> Francês</label>
-                <label><input type="checkbox" value="de"> Alemão</label>
-                <label><input type="checkbox" value="ru"> Russo</label>
-                <label><input type="checkbox" value="it"> Italiano</label>
-                <label><input type="checkbox" value="ko"> Coreano</label>
-                <label><input type="checkbox" value="ja"> Japonês</label>
-                <label><input type="checkbox" value="pl"> Polonês</label>
-                <label><input type="checkbox" value="tr"> Turco</label>
-                <label><input type="checkbox" value="vi"> Vietnamita</label>
-            </div>
-
-            <button id="translateButton" class="btn-neon w-full mt-4 text-lg">Traduzir Roteiro</button>
-            <button id="downloadAllButton" disabled class="btn-neon w-full mt-3 opacity-60">Baixar Tudo (ZIP)</button>
-
-            <div id="messageBox" class="text-xs text-[#d7a8ff] mt-4"></div>
-        </div>
-
-        <!-- ÁREA DE TEXTO -->
-        <div class="md:col-span-2">
-            <label class="text-lg text-[#c7b8ff] font-bold">Roteiro Original:</label>
-            <textarea id="sourceText" rows="16" class="w-full p-4 rounded-lg"></textarea>
-        </div>
-    </div>
-
-    <h2 class="text-2xl mt-10 mb-4 text-[#ba86ff] font-bold">Log de Processamento e Saída:</h2>
-    <div id="translatedResults" class="space-y-4">
-        <div class="p-4 result-box text-[#a3a3ff]">STATUS: Pronto para iniciar.</div>
-    </div>
-
-    <p class="text-xs text-[#8f7cff] mt-10 opacity-70">
-        Engine: Google Translate API (Chunking Ilimitado + Glossário Blindado).
-    </p>
-
 <script>
 const MAX_CHUNK_SIZE = 4500;
 
@@ -293,8 +158,8 @@ async function translateScript() {
             </div>
         `;
 
-        const out = document.getElementById(\`out-\${lang}\`);
-        const bar = document.getElementById(\`pg-\${lang}\`);
+        const out = document.getElementById(`out-${lang}`);
+        const bar = document.getElementById(`pg-${lang}`);
         const status = out.querySelector(".status");
         const content = out.querySelector(".content");
 
@@ -302,10 +167,10 @@ async function translateScript() {
 
         for (let i = 0; i < chunks.length; i++) {
             const translated = await translateChunk(chunks[i], lang);
-            result += translated + "\\n\\n";
+            result += translated + "\n\n";
 
             bar.value = i + 1;
-            status.textContent = \`\${Math.round(((i + 1) / chunks.length) * 100)}%\`;
+            status.textContent = `${Math.round(((i + 1) / chunks.length) * 100)}%`;
         }
 
         content.textContent = result;
@@ -325,7 +190,7 @@ async function downloadAllAsZip() {
     const zip = new JSZip();
 
     for (const lang in completedTranslations) {
-        zip.file(\`\${getFriendlyFilename(lang)}.txt\`, completedTranslations[lang].content);
+        zip.file(`${getFriendlyFilename(lang)}.txt`, completedTranslations[lang].content);
     }
 
     const blob = await zip.generateAsync({ type: "blob" });
@@ -335,6 +200,3 @@ async function downloadAllAsZip() {
     downloadAllButton.disabled = false;
 }
 </script>
-
-</body>
-</html>
