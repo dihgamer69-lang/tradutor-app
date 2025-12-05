@@ -49,7 +49,6 @@
             box-shadow: 0 0 25px #7f00ff55;
         }
 
-        /* BOTÃO NEON */
         .btn-neon {
             background: linear-gradient(90deg, #7f00ff, #005eff);
             color: white;
@@ -131,7 +130,7 @@
     </div>
 
     <p class="text-xs text-[#8f7cff] mt-10 opacity-70">
-        Engine: Google Translate API (Chunking Ilimitado).
+        Engine: Google Translate API (Chunking Ilimitado + Glossário Blindado).
     </p>
 
 <script>
@@ -152,55 +151,57 @@ const LANGUAGE_NAMES = {
 };
 
 // ===========================
-// GLOSSÁRIO: CARREGAMENTO E PRE/PÓS-PROCESSAMENTO
+// GLOSSÁRIO: CARREGAMENTO E PROTEÇÃO
 // ===========================
 
-let glossary = null;
-let glossaryLowerIndex = null;
-let regexTerms = null;
+let glossary = null;             // dicionário bruto { "Aarão": { en:"Aaron", ... }, ... }
+let glossaryLowerIndex = null;   // mapa termoLower -> termoCanonical
+let regexTerms = null;           // regex gigante com todos os termos
 
-// Carrega o glossário uma única vez a partir do arquivo glossario.json
 async function loadGlossary() {
     if (glossary) return;
     try {
         const res = await fetch("glossario.json");
         glossary = await res.json();
 
-        // Índice auxiliar com termos em minúsculas para busca rápida
-        glossaryLowerIndex = {};
         const terms = Object.keys(glossary);
-        for (const term of terms) {
-            glossaryLowerIndex[term.toLowerCase()] = term;
+
+        // índice por minúsculo
+        glossaryLowerIndex = {};
+        for (const t of terms) {
+            glossaryLowerIndex[t.toLowerCase()] = t;
         }
 
-        // Monta regex com TODOS os termos, do maior para o menor (evita pegar pedaço)
+        // ordenar por tamanho (maior primeiro) pra evitar pegar pedaço
         terms.sort((a, b) => b.length - a.length);
+
         const escaped = terms.map(t => escapeRegex(t));
         regexTerms = new RegExp("\\b(" + escaped.join("|") + ")\\b", "giu");
+        console.log("Glossário carregado com", terms.length, "termos.");
     } catch (e) {
         console.error("Erro ao carregar glossário:", e);
         glossary = null;
+        glossaryLowerIndex = null;
         regexTerms = null;
     }
 }
 
-// Escapa caracteres especiais para uso em regex
 function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// Protege termos do glossário ANTES de chamar a API de tradução
+// Protege termos antes de mandar pro Google (modo "anti-falha")
 function protegerTermosGlossario(texto) {
     if (!glossary || !regexTerms) return texto;
 
     return texto.replace(regexTerms, (match) => {
         const canonical = glossaryLowerIndex[match.toLowerCase()] || match;
-        // Marcador que a API não traduz e que depois será substituído pela versão correta
+        // Marcador que a API não traduz
         return "__GLOSS__" + canonical + "__";
     });
 }
 
-// Após a tradução, substitui os marcadores pelos nomes já traduzidos segundo o glossário
+// Depois da tradução, aplica o glossário no idioma de destino
 function aplicarGlossario(textoTraduzido, idiomaDestino) {
     if (!glossary) return textoTraduzido;
 
@@ -209,13 +210,13 @@ function aplicarGlossario(textoTraduzido, idiomaDestino) {
         if (entry && entry[idiomaDestino]) {
             return entry[idiomaDestino];
         }
-        // segurança: se não achar, devolve o próprio termo original em PT
+        // fallback: se não achar, devolve o próprio termo original
         return termoOriginal;
     });
 }
 
 // ===========================
-// FUNÇÕES DE APOIO
+// UTILITÁRIOS DE TEXTO
 // ===========================
 
 function splitText(text, max_len) {
@@ -235,7 +236,6 @@ function splitText(text, max_len) {
     return chunks;
 }
 
-// Traduz um chunk usando Google Translate + proteção de glossário
 async function translateChunk(chunk, lang) {
     await loadGlossary();
 
