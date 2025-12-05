@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tradutor Ilimitado - Dark Mode</title>
+    <!-- Carrega o Tailwind CSS para estilização moderna e responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Bibliotecas para compressão ZIP e salvamento de arquivos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        /* Estilos Customizados para o Tema Escuro Simples */
+        :root {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Fundo Preto para conforto visual */
+        body {
+            background-color: #121212; 
+            color: #E0E0E0;
+        }
+
+        .main-card {
+            background-color: #1E1E1E; /* Painel principal cinza escuro */
+            border: 1px solid #333333;
+        }
+
+        .input-area {
+            background-color: #0D0D0D; 
+            border-color: #333333 !important;
+            color: #F0F0F0;
+        }
+        .input-area:focus {
+            border-color: #4B5563 !important; /* Borda sutil no foco */
+            box-shadow: 0 0 0 1px #4B5563;
+        }
+
+        .result-box {
+            background-color: #1E1E1E;
+            border-color: #333333 !important;
+        }
+        
+        .result-ok {
+            border-color: #10B981 !important; /* Verde Esmeralda para sucesso */
+        }
+        .result-error {
+            border-color: #EF4444 !important; /* Vermelho para erro */
+        }
+
+        /* Cor da barra de progresso */
+        progress::-webkit-progress-value {
+            background: #2563EB; /* Azul para progresso */
+        }
+        progress::-moz-progress-bar {
+            background: #2563EB;
+        }
+    </style>
+</head>
+<body class="text-gray-200">
+    <div class="max-w-6xl mx-auto">
+        <header class="text-center mb-8 mt-6">
+            <h1 class="text-4xl font-extrabold text-white">Tradutor de Roteiros (Modo Escuro)</h1>
+            <p class="text-gray-400 mt-2">Tradução ilimitada com gestão de arquivos. Funcionalidade é o foco.</p>
+        </header>
+
+        <main class="main-card p-6 sm:p-10 rounded-xl shadow-lg space-y-6">
+
+            <!-- Painel de Configurações e Entrada -->
+            <div class="flex flex-col md:flex-row md:space-x-6 space-y-6 md:space-y-0">
+                
+                <!-- Coluna de Configurações -->
+                <div class="md:w-1/3 space-y-4 p-4 rounded-lg bg-[#0d0d0d] border border-gray-700">
+                    <h2 class="text-xl font-semibold text-white border-b border-gray-700 pb-2 mb-4">Configurações e Ações</h2>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Traduzir Para (Selecione um ou mais):</label>
+                        <div id="targetLangCheckboxes" class="grid grid-cols-2 gap-2 text-sm max-h-48 overflow-y-auto p-2 border border-gray-700 rounded-lg bg-[#121212]">
+                            <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="en" class="rounded text-green-500 border-gray-600 bg-gray-900 focus:ring-green-500"> <span>Inglês (EN)</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="es" class="rounded text-green-500 border-gray-600 bg-gray-900 focus:ring-green-500"> <span>Espanhol (ES)</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="fr" class="rounded text-green-500 border-gray-600 bg-gray-900 focus:ring-green-500"> <span>Francês (FR)</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="de" class="rounded text-green-500 border-gray-600 bg-gray-900 focus:ring-green-500"> <span>Alemão (DE)</span></label>
+                            <!-- Português (PT) removido conforme solicitação -->
+                            <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="ja" class="rounded text-green-500 border-gray-600 bg-gray-900 focus:ring-green-500"> <span>Japonês (JA)</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="ru" class="rounded text-green-500 border-gray-600 bg-gray-900 focus:ring-green-500"> <span>Russo (RU)</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="it" class="rounded text-green-500 border-gray-600 bg-gray-900 focus:ring-green-500"> <span>Italiano (IT)</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="ko" class="rounded text-green-500 border-gray-600 bg-gray-900 focus:ring-green-500"> <span>Coreano (KO)</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="pl" class="rounded text-green-500 border-gray-600 bg-gray-900 focus:ring-green-500"> <span>Polonês (PL)</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="tr" class="rounded text-green-500 border-gray-600 bg-gray-900 focus:ring-green-500"> <span>Turco (TR)</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="vi" class="rounded text-green-500 border-gray-600 bg-gray-900 focus:ring-green-500"> <span>Vietnamita (VI)</span></label>
+                        </div>
+                    </div>
+
+                    <button id="translateButton"
+                            class="w-full py-3 mt-4 bg-green-600 hover:bg-green-700 text-white font-bold text-lg rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-4 focus:ring-green-500 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed">
+                        Traduzir Roteiro
+                    </button>
+                    
+                    <button id="downloadAllButton" disabled
+                            class="w-full py-3 mt-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-4 focus:ring-blue-500 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed">
+                        Baixar Tudo (ZIP)
+                    </button>
+                    
+                    <!-- Área para feedback/erro -->
+                    <div id="messageBox" class="text-sm pt-2 min-h-[20px] font-mono text-yellow-400"></div>
+
+                </div>
+
+                <!-- Coluna de Entrada -->
+                <div class="md:w-2/3">
+                    <label for="sourceText" class="block text-xl font-bold text-white mb-2">Roteiro Original (Entrada):</label>
+                    <textarea id="sourceText" rows="15" placeholder="Cole aqui seu roteiro. O sistema fará a divisão automática."
+                              class="input-area w-full p-4 border-2 rounded-lg transition duration-150 ease-in-out resize-none shadow-inner text-sm"></textarea>
+                </div>
+            </div>
+
+            <!-- Painel de Saída (Multi-Tradução) -->
+            <div>
+                <h2 class="block text-xl font-bold text-white mb-4 border-t border-gray-700 pt-6">Log de Processamento e Saída:</h2>
+                <!-- Esta div vai conter todas as traduções, uma por idioma -->
+                <div id="translatedResults" class="space-y-4">
+                    <div class="p-4 border border-gray-700 rounded-lg bg-[#121212] text-gray-400">STATUS: Pronto para iniciar a tarefa.</div>
+                </div>
+            </div>
+
+            <!-- Fonte de Grounding -->
+            <div id="sources" class="text-xs text-gray-500 border-t border-gray-700 pt-4 mt-6">
+                Engine: Google Translate API (Modo Chunking Ilimitado).
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const MAX_CHUNK_SIZE = 4500; 
+        
+        // NOVO: Mapeamento de códigos ISO para nomes completos para o download
+        const LANGUAGE_NAMES = {
+            'en': 'Ingles',
+            'es': 'Espanhol',
+            'fr': 'Frances',
+            'de': 'Alemao',
+            'ja': 'Japones',
+            'ru': 'Russo',
+            'it': 'Italiano',
+            'ko': 'Coreano',
+            'pl': 'Polones',
+            'tr': 'Turco',
+            'vi': 'Vietnamita'
+        };
+
+        const sourceTextarea = document.getElementById('sourceText');
+        const translateButton = document.getElementById('translateButton');
+        const downloadAllButton = document.getElementById('downloadAllButton');
+        const messageBox = document.getElementById('messageBox');
+        const translatedResultsDiv = document.getElementById('translatedResults');
+        
+        let completedTranslations = {}; 
+
+        function splitText(text, max_len) {
+            const chunks = [];
+            let currentText = text.trim();
+            while (currentText.length > max_len) {
+                let splitIdx = currentText.lastIndexOf('.', max_len);
+                if (splitIdx === -1) {
+                    splitIdx = currentText.lastIndexOf('\n', max_len);
+                }
+                if (splitIdx === -1) {
+                    splitIdx = currentText.lastIndexOf(' ', max_len);
+                }
+                
+                if (splitIdx === -1 || splitIdx < max_len * 0.8) { 
+                    splitIdx = max_len;
+                }
+                
+                const chunk = currentText.substring(0, splitIdx).trim();
+                chunks.push(chunk);
+                currentText = currentText.substring(splitIdx).trim();
+            }
+            if (currentText) {
+                chunks.push(currentText.trim());
+            }
+            return chunks.filter(c => c.length > 0);
+        }
+
+        async function translateChunk(chunk, targetLang) {
+            const encodedChunk = encodeURIComponent(chunk);
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodedChunk}`;
+            
+            const options = {
+                method: 'GET',
+                mode: 'cors',
+                headers: {
+                    'Accept': '*/*', 
+                }
+            };
+
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                throw new Error(`Google API returned status ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            let translatedText = '';
+            if (data[0] && Array.isArray(data[0])) {
+                translatedText = data[0].map(segment => segment[0]).join('');
+            } else {
+                 throw new Error("Formato de resposta inesperado do Google Translate.");
+            }
+
+            return translatedText;
+        }
+
+        // === Funções de Download ===
+
+        // Função utilitária para obter o nome de arquivo amigável
+        function getFriendlyFilename(langCode) {
+            const name = LANGUAGE_NAMES[langCode] || langCode.toUpperCase();
+            return `Traducao_${name.replace(/\s/g, '_')}.txt`;
+        }
+
+        // 1. Baixar arquivo individual
+        function downloadFile(filename, content) {
+            const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+            saveAs(blob, filename); 
+        }
+        
+        // 2. Baixar tudo em ZIP
+        async function downloadAllAsZip() {
+            downloadAllButton.textContent = 'Gerando ZIP...';
+            downloadAllButton.disabled = true;
+            
+            const zip = new JSZip();
+            
+            for (const lang in completedTranslations) {
+                if (completedTranslations[lang] && completedTranslations[lang].content) {
+                    // Usa o nome amigável para o arquivo dentro do ZIP
+                    const filename = getFriendlyFilename(lang);
+                    zip.file(filename, completedTranslations[lang].content);
+                }
+            }
+            
+            try {
+                const content = await zip.generateAsync({ type: "blob" });
+                saveAs(content, "traducoes_roteiro_output.zip"); 
+                
+                messageBox.innerHTML = '<p class="text-green-500 font-bold">Arquivo ZIP gerado e download iniciado!</p>';
+
+            } catch(error) {
+                console.error("Erro ao gerar ZIP:", error);
+                messageBox.innerHTML = '<p class="text-red-500 font-bold">ERRO: Falha ao gerar arquivo ZIP.</p>';
+            } finally {
+                downloadAllButton.textContent = 'Baixar Tudo (ZIP)';
+                downloadAllButton.disabled = false;
+            }
+        }
+
+        downloadAllButton.addEventListener('click', downloadAllAsZip);
+
+
+        // === Função principal de Tradução ===
+
+        translateButton.addEventListener('click', translateScript);
+
+        async function translateScript() {
+            const originalText = sourceTextarea.value.trim();
+            const targetLangs = Array.from(document.querySelectorAll('input[name="targetLang"]:checked')).map(checkbox => checkbox.value);
+            
+            messageBox.innerHTML = '';
+            translatedResultsDiv.innerHTML = '<div class="p-4 border border-gray-700 rounded-lg bg-[#121212] text-blue-400">STATUS: Processando a divisão de blocos.</div>';
+            downloadAllButton.disabled = true;
+            completedTranslations = {}; 
+
+            if (!originalText) {
+                messageBox.innerHTML = '<p class="text-yellow-400">ALERTA: Cole o roteiro na caixa de entrada.</p>';
+                return;
+            }
+
+            if (targetLangs.length === 0) {
+                messageBox.innerHTML = '<p class="text-yellow-400">ALERTA: Selecione pelo menos um idioma para traduzir.</p>';
+                return;
+            }
+
+            translateButton.disabled = true;
+            translateButton.textContent = 'EXECUTANDO...';
+
+            const chunks = splitText(originalText, MAX_CHUNK_SIZE);
+            
+            let totalSuccessCount = 0;
+            let errorOccurred = false;
+
+            for (const targetLang of targetLangs) {
+                const langLabelElement = document.querySelector(`input[value="${targetLang}"] + span`);
+                const langLabel = langLabelElement ? langLabelElement.textContent : targetLang.toUpperCase();
+                
+                const outputContainerId = `translation-${targetLang}`;
+
+                translatedResultsDiv.innerHTML += `
+                    <div id="${outputContainerId}" class="result-box p-4 rounded-lg shadow-sm border-2 border-gray-700">
+                        <div class="flex justify-between items-center mb-2">
+                             <h3 class="text-lg font-semibold text-white">${langLabel} (${targetLang.toUpperCase()})</h3>
+                             <button class="download-individual-btn bg-gray-600 text-gray-300 text-xs px-2 py-1 rounded-full opacity-0 pointer-events-none transition duration-200 hover:bg-green-700/50 hover:text-white">Baixar .TXT</button>
+                        </div>
+                        <div class="status-message text-blue-400 font-medium">Blocos identificados: ${chunks.length}. Traduzindo... (0%)</div>
+                        <progress id="progress-${targetLang}" class="w-full h-2 mt-2" value="0" max="${chunks.length}"></progress>
+                        <pre class="translated-content whitespace-pre-wrap font-sans text-gray-400 mt-2 min-h-[50px]"></pre>
+                    </div>
+                `;
+                
+                const outputElement = document.getElementById(outputContainerId);
+                const progressBar = document.getElementById(`progress-${targetLang}`);
+                const statusMessage = outputElement.querySelector('.status-message');
+                const downloadBtn = outputElement.querySelector('.download-individual-btn');
+                const translatedContentPre = outputElement.querySelector('.translated-content');
+
+                let translatedChunks = [];
+                let chunkSuccessCount = 0;
+
+                try {
+                    for (let i = 0; i < chunks.length; i++) {
+                        const chunk = chunks[i];
+                        await new Promise(resolve => setTimeout(resolve, 150)); // Delay para evitar bloqueio
+                        
+                        const translatedChunk = await translateChunk(chunk, targetLang);
+                        translatedChunks.push(translatedChunk);
+                        chunkSuccessCount++;
+
+                        const progress = Math.round((chunkSuccessCount / chunks.length) * 100);
+                        progressBar.value = chunkSuccessCount;
+                        statusMessage.innerHTML = `TRADUZINDO [${progress}%]: Bloco ${i + 1} de ${chunks.length} processado.`;
+                    }
+
+                    const fullTranslation = translatedChunks.join('\n\n'); 
+                    
+                    // NOVO: Usa o nome completo para salvar na estrutura de dados
+                    completedTranslations[targetLang] = { content: fullTranslation };
+                    
+                    outputElement.classList.remove('border-gray-700');
+                    outputElement.classList.add('result-ok');
+                    statusMessage.classList.replace('text-blue-400', 'text-green-500');
+                    progressBar.style.display = 'none';
+
+                    outputElement.querySelector('h3').textContent = `${langLabel} (${targetLang.toUpperCase()}) - CONCLUÍDO`;
+                    translatedContentPre.textContent = fullTranslation;
+
+                    // NOVO: Usa o nome completo para o download individual
+                    const downloadFilename = getFriendlyFilename(targetLang);
+                    downloadBtn.classList.remove('opacity-0', 'pointer-events-none');
+                    downloadBtn.classList.add('bg-green-600', 'hover:bg-green-700', 'text-white');
+                    downloadBtn.onclick = () => downloadFile(downloadFilename, fullTranslation);
+
+                    totalSuccessCount++;
+
+                } catch (error) {
+                    errorOccurred = true;
+                    console.error(`Erro fatal ao traduzir para ${targetLang}:`, error);
+                    
+                    if (outputElement) {
+                         outputElement.classList.remove('border-gray-700');
+                         outputElement.classList.add('result-error');
+                         statusMessage.classList.replace('text-blue-400', 'text-red-500');
+                         progressBar.style.display = 'none';
+
+                         outputElement.querySelector('h3').textContent = `${langLabel} (${targetLang.toUpperCase()}) - FALHA`;
+                         statusMessage.textContent = `FALHA DE CONEXÃO: ${error.message}. (Tente novamente mais tarde.)`;
+                    }
+                }
+            }
+
+            if (totalSuccessCount === targetLangs.length) {
+                messageBox.innerHTML = '<p class="text-green-500 font-bold">TODAS AS TRADUÇÕES CONCLUÍDAS. DOWNLOAD ATIVADO.</p>';
+            } else if (totalSuccessCount > 0 && errorOccurred) {
+                messageBox.innerHTML = `<p class="text-yellow-500 font-bold">ALERTA: Tradução Parcial. ${targetLangs.length - totalSuccessCount} falha(s). Verifique os logs vermelhos.</p>`;
+            } else if (errorOccurred) {
+                messageBox.innerHTML = '<p class="text-red-500 font-bold">ERRO CRÍTICO: Todas as traduções falharam. Verifique a rede.</p>';
+            }
+            
+            if (totalSuccessCount > 0) {
+                 downloadAllButton.disabled = false;
+            }
+
+            translateButton.disabled = false;
+            translateButton.textContent = 'Traduzir Roteiro';
+        }
+        
+        sourceTextarea.addEventListener('input', () => {
+             translatedResultsDiv.innerHTML = '<div class="p-4 border border-gray-700 rounded-lg bg-[#121212] text-gray-400">STATUS: Pronto para iniciar a tarefa.</div>';
+             messageBox.innerHTML = '';
+             downloadAllButton.disabled = true;
+             completedTranslations = {};
+        });
+
+    </script>
+</body>
+</html>
