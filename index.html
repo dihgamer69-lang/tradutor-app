@@ -154,9 +154,9 @@ const LANGUAGE_NAMES = {
 // GLOSSÁRIO: CARREGAMENTO E PROTEÇÃO
 // ===========================
 
-let glossary = null;             // dicionário bruto { "Aarão": { en:"Aaron", ... }, ... }
-let glossaryLowerIndex = null;   // mapa termoLower -> termoCanonical
-let regexTerms = null;           // regex gigante com todos os termos
+let glossary = null;             
+let glossaryLowerIndex = null;   
+let regexTerms = null;           
 
 async function loadGlossary() {
     if (glossary) return;
@@ -166,13 +166,11 @@ async function loadGlossary() {
 
         const terms = Object.keys(glossary);
 
-        // índice por minúsculo
         glossaryLowerIndex = {};
         for (const t of terms) {
             glossaryLowerIndex[t.toLowerCase()] = t;
         }
 
-        // ordenar por tamanho (maior primeiro) pra evitar pegar pedaço
         terms.sort((a, b) => b.length - a.length);
 
         const escaped = terms.map(t => escapeRegex(t));
@@ -190,34 +188,26 @@ function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// Protege termos antes de mandar pro Google (modo "anti-falha")
 function protegerTermosGlossario(texto) {
     if (!glossary || !regexTerms) return texto;
 
     return texto.replace(regexTerms, (match) => {
         const canonical = glossaryLowerIndex[match.toLowerCase()] || match;
-        // Marcador que a API não traduz
-        return "__GLOSS__" + canonical + "__";
+        return "§GLOSS:" + canonical + "§";
     });
 }
 
-// Depois da tradução, aplica o glossário no idioma de destino
 function aplicarGlossario(textoTraduzido, idiomaDestino) {
     if (!glossary) return textoTraduzido;
 
-    return textoTraduzido.replace(/__GLOSS__(.+?)__/g, (full, termoOriginal) => {
+    return textoTraduzido.replace(/§GLOSS:([^§]+)§/g, (full, termoOriginal) => {
         const entry = glossary[termoOriginal];
         if (entry && entry[idiomaDestino]) {
             return entry[idiomaDestino];
         }
-        // fallback: se não achar, devolve o próprio termo original
         return termoOriginal;
     });
 }
-
-// ===========================
-// UTILITÁRIOS DE TEXTO
-// ===========================
 
 function splitText(text, max_len) {
     const chunks = [];
@@ -255,10 +245,6 @@ async function translateChunk(chunk, lang) {
 function getFriendlyFilename(lang) {
     return `Traducao_${LANGUAGE_NAMES[lang]}`;
 }
-
-// ===========================
-// CONTROLE DE INTERFACE
-// ===========================
 
 const sourceTextarea = document.getElementById("sourceText");
 const translateButton = document.getElementById("translateButton");
@@ -307,8 +293,8 @@ async function translateScript() {
             </div>
         `;
 
-        const out = document.getElementById(`out-${lang}`);
-        const bar = document.getElementById(`pg-${lang}`);
+        const out = document.getElementById(\`out-\${lang}\`);
+        const bar = document.getElementById(\`pg-\${lang}\`);
         const status = out.querySelector(".status");
         const content = out.querySelector(".content");
 
@@ -316,10 +302,10 @@ async function translateScript() {
 
         for (let i = 0; i < chunks.length; i++) {
             const translated = await translateChunk(chunks[i], lang);
-            result += translated + "\n\n";
+            result += translated + "\\n\\n";
 
             bar.value = i + 1;
-            status.textContent = `${Math.round(((i + 1) / chunks.length) * 100)}%`;
+            status.textContent = \`\${Math.round(((i + 1) / chunks.length) * 100)}%\`;
         }
 
         content.textContent = result;
@@ -339,7 +325,7 @@ async function downloadAllAsZip() {
     const zip = new JSZip();
 
     for (const lang in completedTranslations) {
-        zip.file(`${getFriendlyFilename(lang)}.txt`, completedTranslations[lang].content);
+        zip.file(\`\${getFriendlyFilename(lang)}.txt\`, completedTranslations[lang].content);
     }
 
     const blob = await zip.generateAsync({ type: "blob" });
