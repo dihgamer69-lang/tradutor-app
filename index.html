@@ -3,301 +3,281 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tradutor Ilimitado - Matrix Verde</title>
+    <title>Tradutor de Roteiros — Cyber Matrix</title>
+
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- ZIP libs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-<style>
-    :root {
-        font-family: 'Courier New', monospace;
-    }
+    <style>
+        body {
+            background-color: #050009;
+            color: #cfc7ff;
+            font-family: "Courier New", monospace;
+            overflow-x: hidden;
+        }
 
-    body {
-        background: black;
-        color: #00ff9d;
-        overflow-x: hidden;
-        position: relative;
-    }
+        /* MATRIZ CAINDO AO FUNDO */
+        body::before {
+            content: "01 10 01 110 001 010 110 010 110 001 110 010";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            font-size: 22px;
+            line-height: 22px;
+            white-space: pre;
+            opacity: 0.15;
+            color: #7f00ff;
+            animation: matrixFall 18s linear infinite;
+            pointer-events: none;
+        }
 
-    body::before {
-        content: "";
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image: url('https://i.imgur.com/1N7zF8p.gif');
-        background-size: cover;
-        opacity: 0.18;
-        z-index: -1;
-        mix-blend-mode: screen;
-    }
+        @keyframes matrixFall {
+            0% { transform: translateY(-100%); opacity: 0.15; }
+            100% { transform: translateY(100%); opacity: 0.20; }
+        }
 
-    .main-card {
-        background: rgba(0, 0, 0, 0.70);
-        border: 1px solid #003b2e;
-        box-shadow: 0 0 20px #003b2e;
-    }
+        /* PAINEL CYBERPUNK */
+        .panel {
+            background: rgba(15, 0, 25, 0.55);
+            border: 1px solid #7f00ff;
+            box-shadow: 0 0 25px #7f00ff55;
+        }
 
-    .input-area,
-    #translatedResults div,
-    .result-box {
-        background: rgba(0, 0, 0, 0.32);
-        border: 1px solid #004d38 !important;
-        color: #00ffae;
-    }
+        /* BOTÃO NEON */
+        .btn-neon {
+            background: linear-gradient(90deg, #7f00ff, #005eff);
+            color: white;
+            font-weight: bold;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 0 12px #7f00ffaa, 0 0 18px #005effaa inset;
+            transition: 0.15s;
+        }
+        .btn-neon:hover {
+            transform: scale(1.03);
+            box-shadow: 0 0 18px #7f00ffcc, 0 0 25px #005effcc inset;
+        }
 
-    .input-area:focus {
-        border-color: #00ffae !important;
-        box-shadow: 0 0 12px #00ffae;
-    }
+        textarea {
+            background: rgba(0, 0, 0, 0.65);
+            color: #d8caff;
+            border: 1px solid #7f00ff;
+        }
 
-    h1, h2, h3, label {
-        color: #00ffae !important;
-        text-shadow: 0 0 10px #00ffae;
-    }
+        .result-box {
+            background: rgba(0, 0, 30, 0.45);
+            border: 1px solid #5f00ff;
+        }
 
-    span {
-        color: #00ffae !important;
-    }
-
-    #translateButton {
-        background: #00ff9d !important;
-        color: black !important;
-        border: 1px solid #00ffaa;
-        box-shadow: 0 0 15px #00ff9d;
-    }
-    #translateButton:hover {
-        background: #00ffaa !important;
-        transform: scale(1.02);
-    }
-
-    #downloadAllButton {
-        background: #0077ff !important;
-        border: 1px solid #00ccff;
-        box-shadow: 0 0 12px #00aaff;
-    }
-
-    #downloadAllButton:hover {
-        transform: scale(1.02);
-    }
-
-    .status-message {
-        color: #00eaff !important;
-    }
-
-    .result-ok {
-        border-color: #00ff9d !important;
-        box-shadow: 0 0 10px #00ff9d;
-    }
-
-    .result-error {
-        border-color: #ff0066 !important;
-        box-shadow: 0 0 10px #ff0044;
-    }
-
-    progress::-webkit-progress-value {
-        background: #00ff9d;
-    }
-    progress {
-        background: #002b20;
-        height: 8px;
-        border-radius: 6px;
-    }
-</style>
-
+        progress::-webkit-progress-value {
+            background: #7f00ff;
+        }
+        progress::-moz-progress-bar {
+            background: #7f00ff;
+        }
+    </style>
 </head>
-<body class="text-gray-200">
-    <div class="max-w-6xl mx-auto">
-        <header class="text-center mb-8 mt-6">
-            <h1 class="text-4xl font-extrabold">Tradutor de Roteiros (Matrix Verde)</h1>
-            <p class="mt-2 text-[#00ffae]">Tradução ilimitada em um visual futurista.</p>
-        </header>
 
-        <main class="main-card p-6 sm:p-10 rounded-xl shadow-lg space-y-6">
+<body class="p-6">
 
-            <div class="flex flex-col md:flex-row md:space-x-6 space-y-6 md:space-y-0">
+    <h1 class="text-center text-4xl font-bold mb-2 text-[#9d5cff] drop-shadow-[0_0_10px_#7f00ff]">
+        Tradutor de Roteiros <span class="text-[#5f9dff]">(Modo Hacker Cyber Matrix)</span>
+    </h1>
 
-                <div class="md:w-1/3 space-y-4 p-4 rounded-lg border border-gray-700">
-                    <h2 class="text-xl font-semibold border-b border-gray-700 pb-2 mb-4">Configurações</h2>
+    <p class="text-center text-[#a5a5ff] mb-10">Tradução ilimitada com visual Matrix futurista roxo e azul neon.</p>
 
-                    <label class="block text-sm font-medium mb-2">Idiomas:</label>
+    <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
 
-                    <div id="targetLangCheckboxes" class="grid grid-cols-2 gap-2 text-sm max-h-48 overflow-y-auto p-2 border border-gray-700 rounded-lg">
-                        <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="en"> <span>Inglês (EN)</span></label>
-                        <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="es"> <span>Espanhol (ES)</span></label>
-                        <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="fr"> <span>Francês (FR)</span></label>
-                        <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="de"> <span>Alemão (DE)</span></label>
-                        <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="ja"> <span>Japonês (JA)</span></label>
-                        <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="ru"> <span>Russo (RU)</span></label>
-                        <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="it"> <span>Italiano (IT)</span></label>
-                        <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="ko"> <span>Coreano (KO)</span></label>
-                        <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="pl"> <span>Polonês (PL)</span></label>
-                        <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="tr"> <span>Turco (TR)</span></label>
-                        <label class="flex items-center space-x-2"><input type="checkbox" name="targetLang" value="vi"> <span>Vietnamita (VI)</span></label>
-                    </div>
+        <!-- CONFIGURAÇÕES -->
+        <div class="panel p-6 rounded-xl">
+            <h2 class="text-xl font-bold text-[#c7a0ff] mb-4">Idiomas:</h2>
 
-                    <button id="translateButton" class="w-full py-3 mt-4 font-bold text-lg rounded-lg shadow-md">
-                        Traduzir Roteiro
-                    </button>
-
-                    <button id="downloadAllButton" disabled class="w-full py-3 mt-3 font-bold text-lg rounded-lg shadow-md">
-                        Baixar Tudo (ZIP)
-                    </button>
-
-                    <div id="messageBox" class="text-sm pt-2 min-h-[20px] font-mono"></div>
-                </div>
-
-                <div class="md:w-2/3">
-                    <label for="sourceText" class="block text-xl font-bold mb-2">Roteiro Original:</label>
-                    <textarea id="sourceText" rows="15" class="input-area w-full p-4 border-2 rounded-lg text-sm resize-none shadow-inner"></textarea>
-                </div>
+            <div id="targetLangCheckboxes" class="grid grid-cols-2 gap-2 text-sm max-h-48 overflow-y-auto bg-black/30 p-2 border border-[#7f00ff] rounded-lg">
+                <label><input type="checkbox" value="en"> Inglês</label>
+                <label><input type="checkbox" value="es"> Espanhol</label>
+                <label><input type="checkbox" value="fr"> Francês</label>
+                <label><input type="checkbox" value="de"> Alemão</label>
+                <label><input type="checkbox" value="ru"> Russo</label>
+                <label><input type="checkbox" value="it"> Italiano</label>
+                <label><input type="checkbox" value="ko"> Coreano</label>
+                <label><input type="checkbox" value="ja"> Japonês</label>
+                <label><input type="checkbox" value="pl"> Polonês</label>
+                <label><input type="checkbox" value="tr"> Turco</label>
+                <label><input type="checkbox" value="vi"> Vietnamita</label>
             </div>
 
-            <div>
-                <h2 class="block text-xl font-bold mb-4 border-t border-gray-700 pt-6">Log:</h2>
-                <div id="translatedResults" class="space-y-4">
-                    <div class="p-4 border border-gray-700 rounded-lg">STATUS: aguardando...</div>
-                </div>
-            </div>
+            <button id="translateButton" class="btn-neon w-full mt-4 text-lg">Traduzir Roteiro</button>
+            <button id="downloadAllButton" disabled class="btn-neon w-full mt-3 opacity-60">Baixar Tudo (ZIP)</button>
 
-        </main>
+            <div id="messageBox" class="text-xs text-[#d7a8ff] mt-4"></div>
+        </div>
+
+        <!-- ÁREA DE TEXTO -->
+        <div class="md:col-span-2">
+            <label class="text-lg text-[#c7b8ff] font-bold">Roteiro Original:</label>
+            <textarea id="sourceText" rows="16" class="w-full p-4 rounded-lg"></textarea>
+        </div>
     </div>
 
+    <!-- RESULTADOS -->
+    <h2 class="text-2xl mt-10 mb-4 text-[#ba86ff] font-bold">Log de Processamento e Saída:</h2>
+
+    <div id="translatedResults" class="space-y-4">
+        <div class="p-4 result-box text-[#a3a3ff]">STATUS: Pronto para iniciar.</div>
+    </div>
+
+    <!-- ENGINE INFO -->
+    <p class="text-xs text-[#8f7cff] mt-10 opacity-70">
+        Engine: Google Translate API (Chunking Ilimitado).
+    </p>
+
 <script>
-    const MAX_CHUNK_SIZE = 4500;
-    const LANGUAGE_NAMES = {
-        'en': 'Ingles',
-        'es': 'Espanhol',
-        'fr': 'Frances',
-        'de': 'Alemao',
-        'ja': 'Japones',
-        'ru': 'Russo',
-        'it': 'Italiano',
-        'ko': 'Coreano',
-        'pl': 'Polones',
-        'tr': 'Turco',
-        'vi': 'Vietnamita'
-    };
 
-    const sourceTextarea = document.getElementById('sourceText');
-    const translateButton = document.getElementById('translateButton');
-    const downloadAllButton = document.getElementById('downloadAllButton');
-    const messageBox = document.getElementById('messageBox');
-    const translatedResultsDiv = document.getElementById('translatedResults');
-    let completedTranslations = {};
+const MAX_CHUNK_SIZE = 4500;
 
-    function splitText(text, max_len) {
-        const chunks = [];
-        let currentText = text.trim();
-        while (currentText.length > max_len) {
-            let splitIdx = currentText.lastIndexOf('.', max_len);
-            if (splitIdx === -1) splitIdx = currentText.lastIndexOf('\n', max_len);
-            if (splitIdx === -1) splitIdx = currentText.lastIndexOf(' ', max_len);
-            if (splitIdx === -1 || splitIdx < max_len * 0.8) splitIdx = max_len;
-            chunks.push(currentText.substring(0, splitIdx).trim());
-            currentText = currentText.substring(splitIdx).trim();
-        }
-        if (currentText) chunks.push(currentText.trim());
-        return chunks.filter(c => c.length > 0);
+const LANGUAGE_NAMES = {
+    en: "Inglês",
+    es: "Espanhol",
+    fr: "Francês",
+    de: "Alemão",
+    ru: "Russo",
+    it: "Italiano",
+    ja: "Japonês",
+    ko: "Coreano",
+    pl: "Polonês",
+    tr: "Turco",
+    vi: "Vietnamita"
+};
+
+const sourceTextarea = document.getElementById("sourceText");
+const translateButton = document.getElementById("translateButton");
+const downloadAllButton = document.getElementById("downloadAllButton");
+const messageBox = document.getElementById("messageBox");
+const translatedResultsDiv = document.getElementById("translatedResults");
+
+let completedTranslations = {};
+
+function splitText(text, max_len) {
+    const chunks = [];
+    let current = text.trim();
+
+    while (current.length > max_len) {
+        let idx = current.lastIndexOf(".", max_len);
+        if (idx === -1) idx = current.lastIndexOf(" ", max_len);
+        if (idx === -1) idx = max_len;
+
+        chunks.push(current.substring(0, idx).trim());
+        current = current.substring(idx).trim();
+    }
+    if (current) chunks.push(current);
+
+    return chunks;
+}
+
+async function translateChunk(chunk, lang) {
+    const encoded = encodeURIComponent(chunk);
+    const url =
+        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encoded}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    return data[0].map(s => s[0]).join("");
+}
+
+function getFriendlyFilename(lang) {
+    return `Traducao_${LANGUAGE_NAMES[lang]}`;
+}
+
+async function downloadAllAsZip() {
+    downloadAllButton.textContent = "Gerando ZIP...";
+    downloadAllButton.disabled = true;
+
+    const zip = new JSZip();
+
+    for (const lang in completedTranslations) {
+        zip.file(getFriendlyFilename(lang) + ".txt", completedTranslations[lang].content);
     }
 
-    async function translateChunk(chunk, targetLang) {
-        const encoded = encodeURIComponent(chunk);
-        const url =
-            `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encoded}`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Falha " + response.status);
-        const data = await response.json();
-        return data[0].map(s => s[0]).join('');
+    const blob = await zip.generateAsync({ type: "blob" });
+    saveAs(blob, "Traducoes_Roteiro.zip");
+
+    downloadAllButton.textContent = "Baixar Tudo (ZIP)";
+    downloadAllButton.disabled = false;
+}
+
+downloadAllButton.onclick = downloadAllAsZip;
+
+translateButton.onclick = translateScript;
+
+async function translateScript() {
+
+    const text = sourceTextarea.value.trim();
+    const langs = [...document.querySelectorAll("input[type=checkbox]:checked")]
+        .map(cb => cb.value);
+
+    if (!text) {
+        messageBox.textContent = "Cole um roteiro antes de traduzir.";
+        return;
+    }
+    if (langs.length === 0) {
+        messageBox.textContent = "Selecione pelo menos 1 idioma.";
+        return;
     }
 
-    translateButton.addEventListener('click', translateScript);
+    messageBox.textContent = "";
+    translatedResultsDiv.innerHTML =
+        `<div class='p-4 result-box text-[#a3a3ff]'>STATUS: Dividindo texto...</div>`;
 
-    async function translateScript() {
-        const originalText = sourceTextarea.value.trim();
-        const targetLangs = Array.from(document.querySelectorAll('input[name="targetLang"]:checked')).map(cb => cb.value);
+    translateButton.textContent = "EXECUTANDO...";
+    translateButton.disabled = true;
 
-        messageBox.innerHTML = '';
-        translatedResultsDiv.innerHTML =
-            `<div class="p-4 border border-gray-700 rounded-lg">Processando...</div>`;
-        downloadAllButton.disabled = true;
-        completedTranslations = {};
+    completedTranslations = {};
 
-        if (!originalText) {
-            messageBox.innerHTML = '<p>Cole o roteiro.</p>';
-            return;
-        }
-        if (targetLangs.length === 0) {
-            messageBox.innerHTML = '<p>Selecione idiomas.</p>';
-            return;
-        }
+    const chunks = splitText(text, MAX_CHUNK_SIZE);
 
-        translateButton.disabled = true;
-        translateButton.textContent = 'Executando...';
+    for (const lang of langs) {
 
-        const chunks = splitText(originalText, MAX_CHUNK_SIZE);
-        let totalSuccess = 0;
+        translatedResultsDiv.innerHTML += `
+            <div id="out-${lang}" class="result-box p-4 rounded">
+                <h3 class="text-[#d9b8ff] font-bold">${LANGUAGE_NAMES[lang]} (${lang})</h3>
+                <div class="status">0%</div>
+                <progress id="pg-${lang}" class="w-full" value="0" max="${chunks.length}"></progress>
+                <pre class="content whitespace-pre-wrap mt-2"></pre>
+            </div>
+        `;
 
-        for (const lang of targetLangs) {
-            translatedResultsDiv.innerHTML += `
-                <div id="translation-${lang}" class="result-box p-4 rounded-lg border-2 border-gray-700">
-                    <h3 class="text-lg font-semibold">${lang.toUpperCase()}</h3>
-                    <div class="status-message">Blocos: ${chunks.length}</div>
-                    <progress id="progress-${lang}" class="w-full h-2 mt-2" value="0" max="${chunks.length}"></progress>
-                    <pre class="translated-content whitespace-pre-wrap mt-2"></pre>
-                </div>
-            `;
+        const out = document.getElementById(`out-${lang}`);
+        const bar = document.getElementById(`pg-${lang}`);
+        const status = out.querySelector(".status");
+        const content = out.querySelector(".content");
 
-            const box = document.getElementById(`translation-${lang}`);
-            const progress = document.getElementById(`progress-${lang}`);
-            const status = box.querySelector('.status-message');
-            const content = box.querySelector('.translated-content');
+        let result = "";
 
-            let translatedChunks = [];
-            let successCount = 0;
+        for (let i = 0; i < chunks.length; i++) {
+            const translated = await translateChunk(chunks[i], lang);
+            result += translated + "\n\n";
 
-            try {
-                for (let i = 0; i < chunks.length; i++) {
-                    await new Promise(r => setTimeout(r, 150));
-                    const translated = await translateChunk(chunks[i], lang);
-                    translatedChunks.push(translated);
-                    successCount++;
-                    progress.value = successCount;
-                    status.innerHTML = `Processo: ${Math.round((successCount / chunks.length) * 100)}%`;
-                }
-
-                const full = translatedChunks.join('\n\n');
-                completedTranslations[lang] = { content: full };
-                box.classList.add('result-ok');
-                content.textContent = full;
-                totalSuccess++;
-
-            } catch {
-                box.classList.add('result-error');
-                status.innerHTML = "Erro ao traduzir.";
-            }
+            bar.value = i + 1;
+            status.textContent = `${Math.round(((i + 1) / chunks.length) * 100)}%`;
         }
 
-        if (totalSuccess > 0) {
-            downloadAllButton.disabled = false;
-            downloadAllButton.onclick = downloadZip;
-        }
-
-        translateButton.disabled = false;
-        translateButton.textContent = 'Traduzir Roteiro';
+        content.textContent = result;
+        completedTranslations[lang] = { content: result };
     }
 
-    async function downloadZip() {
-        const zip = new JSZip();
-        for (const lang in completedTranslations) {
-            const txt = completedTranslations[lang].content;
-            zip.file(`${lang}.txt`, txt);
-        }
-        const blob = await zip.generateAsync({ type: "blob" });
-        saveAs(blob, "traducoes.zip");
-    }
+    messageBox.textContent = "Tradução concluída!";
+    translateButton.disabled = false;
+    translateButton.textContent = "Traduzir Roteiro";
+    downloadAllButton.disabled = false;
+}
+
 </script>
 
 </body>
