@@ -151,6 +151,9 @@ const LANGUAGE_NAMES = {
     vi: "Vietnamita"
 };
 
+/* ===========================
+   CARREGAR GLOSSÁRIO
+=========================== */
 let glossary = {};
 
 async function loadGlossary() {
@@ -162,9 +165,11 @@ async function loadGlossary() {
         console.error("Erro ao carregar glossário:", e);
     }
 }
-
 loadGlossary();
 
+/* ===========================
+   APLICAR GLOSSÁRIO
+=========================== */
 function applyGlossary(text, targetLang) {
     if (!glossary[targetLang]) return text;
 
@@ -178,6 +183,9 @@ function applyGlossary(text, targetLang) {
     return corrected;
 }
 
+/* ===========================
+   SPLIT DO TEXTO
+=========================== */
 function splitText(text, max_len) {
     const chunks = [];
     let current = text.trim();
@@ -195,6 +203,9 @@ function splitText(text, max_len) {
     return chunks;
 }
 
+/* ===========================
+   TRADUZIR UM CHUNK
+=========================== */
 async function translateChunk(chunk, lang) {
     const encoded = encodeURIComponent(chunk);
     const url = 
@@ -204,10 +215,15 @@ async function translateChunk(chunk, lang) {
     const data = await res.json();
 
     let translated = data[0].map(s => s[0]).join("");
+
     translated = applyGlossary(translated, lang);
 
     return translated;
 }
+
+/* ===========================
+   TRADUZIR SCRIPT COMPLETO
+=========================== */
 
 const sourceTextarea = document.getElementById("sourceText");
 const translateButton = document.getElementById("translateButton");
@@ -282,6 +298,9 @@ async function translateScript() {
     downloadAllButton.disabled = false;
 }
 
+/* ===========================
+   GERAR ZIP
+=========================== */
 async function downloadAllAsZip() {
     downloadAllButton.textContent = "Gerando ZIP...";
     downloadAllButton.disabled = true;
