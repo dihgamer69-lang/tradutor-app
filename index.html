@@ -91,6 +91,7 @@
 
     <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
 
+        <!-- CONFIGURAÇÕES -->
         <div class="panel p-6 rounded-xl">
             <h2 class="text-xl font-bold text-[#c7a0ff] mb-4">Idiomas:</h2>
 
@@ -114,6 +115,7 @@
             <div id="messageBox" class="text-xs text-[#d7a8ff] mt-4"></div>
         </div>
 
+        <!-- ÁREA DE TEXTO -->
         <div class="md:col-span-2">
             <label class="text-lg text-[#c7b8ff] font-bold">Roteiro Original:</label>
             <textarea id="sourceText" rows="16" class="w-full p-4 rounded-lg"></textarea>
@@ -130,56 +132,116 @@
     </p>
 
 <script>
-let glossario = {};
+/* ===========================================================
+   CONFIG
+=========================================================== */
 const MAX_CHUNK_SIZE = 4500;
 
 const LANGUAGE_NAMES = {
-    en: "Inglês", es: "Espanhol", fr: "Francês", de: "Alemão",
-    ru: "Russo", it: "Italiano", ja: "Japonês", ko: "Coreano",
-    pl: "Polonês", tr: "Turco", vi: "Vietnamita"
+    en: "Inglês",
+    es: "Espanhol",
+    fr: "Francês",
+    de: "Alemão",
+    ru: "Russo",
+    it: "Italiano",
+    ja: "Japonês",
+    ko: "Coreano",
+    pl: "Polonês",
+    tr: "Turco",
+    vi: "Vietnamita"
 };
 
+const sourceTextarea      = document.getElementById("sourceText");
+const translateButton     = document.getElementById("translateButton");
+const downloadAllButton   = document.getElementById("downloadAllButton");
+const messageBox          = document.getElementById("messageBox");
+const translatedResultsDiv= document.getElementById("translatedResults");
+
+let completedTranslations = {};
+let glossario = {};
+
+/* ===========================================================
+   1) CARREGAR GLOSSÁRIO (glossario.json na mesma pasta)
+   Formato esperado:
+   {
+     "Miguel": { "en":"Michael", "es":"Miguel", ... },
+     "Arcanjo Miguel": { "en":"Archangel Michael", ... },
+     ...
+   }
+=========================================================== */
 async function loadGlossary() {
-    const response = await fetch("glossario.json");
-    glossario = await response.json();
+    try {
+        const response = await fetch("glossario.json");
+        glossario = await response.json();
+        console.log("Glossário carregado. Termos:", Object.keys(glossario).length);
+    } catch (e) {
+        console.error("Erro ao carregar glossário:", e);
+        messageBox.textContent = "Erro ao carregar glossário. Confira o arquivo glossario.json.";
+    }
 }
 loadGlossary();
 
+/* ===========================================================
+   2) ESCAPAR PARA REGEX
+=========================================================== */
 function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/* ===========================================================
+   3) PROTEGER TERMOS DO GLOSSÁRIO ANTES DA TRADUÇÃO
+      Ex.: Miguel -> {{Miguel}}, Arcanjo Miguel -> {{Arcanjo Miguel}}
+=========================================================== */
 function protectGlossaryTerms(text) {
     let result = text;
-    for (const termoPT in glossario) {
+
+    // processar termos compostos primeiro (ex: "Arcanjo Miguel" antes de "Miguel")
+    const termos = Object.keys(glossario).sort((a, b) => b.length - a.length);
+
+    for (const termoPT of termos) {
         const regex = new RegExp("\\b" + escapeRegex(termoPT) + "\\b", "gi");
-        result = result.replace(regex, `{{${termoPT}}}`);
+        result = result.replace(regex, match => `{{${termoPT}}}`);
     }
+
     return result;
 }
 
-function applyGlossarioFinal(text, lang) {
+/* ===========================================================
+   4) RESTAURAR PLACEHOLDERS PARA A TRADUÇÃO CERTA
+      {{Miguel}} -> Michael (en), {{Miguel}} -> Miguel (es), etc.
+=========================================================== */
+function restoreGlossaryTerms(text, targetLang) {
+    return text.replace(/\{\{([^}]+)\}\}/g, (match, termoPT) => {
+        const entry = glossario[termoPT];
+        if (!entry) return termoPT;
+        return entry[targetLang] || entry["en"] || termoPT;
+    });
+}
+
+/* ===========================================================
+   5) APLICAR GLOSSÁRIO TAMBÉM DIRETO NO TEXTO FINAL
+      Garante que, se o Google gerar uma forma estranha,
+      a gente força a forma oficial do glossário.
+=========================================================== */
+function applyGlossarioFinal(text, targetLang) {
     for (const termoPT in glossario) {
-        const traducao = glossario[termoPT][lang];
+        const traducao = glossario[termoPT][targetLang];
         if (!traducao) continue;
 
-        const regex = new RegExp("\\b" + escapeRegex(termoPT) + "\\b", "gi");
+        const regexPT   = new RegExp("\\b" + escapeRegex(termoPT)   + "\\b", "gi");
         const regexTrad = new RegExp("\\b" + escapeRegex(traducao) + "\\b", "gi");
 
-        text = text.replace(regex, traducao);
+        // converte qualquer ocorrência do termo original em PT
+        text = text.replace(regexPT, traducao);
+        // normaliza variações da própria tradução para a forma oficial
         text = text.replace(regexTrad, traducao);
     }
     return text;
 }
 
-function restoreGlossaryTerms(text, lang) {
-    return text.replace(/\{\{([^}]+)\}\}/g, (match, termoPT) => {
-        const entry = glossario[termoPT];
-        if (!entry) return termoPT;
-        return entry[lang] || entry["en"] || termoPT;
-    });
-}
-
+/* ===========================================================
+   6) SPLIT DO TEXTO EM CHUNKS
+=========================================================== */
 function splitText(text, max_len) {
     const chunks = [];
     let current = text.trim();
@@ -197,6 +259,9 @@ function splitText(text, max_len) {
     return chunks;
 }
 
+/* ===========================================================
+   7) TRADUZIR UM CHUNK (COM PROTEÇÃO + RESTAURAÇÃO + GLOSSÁRIO FINAL)
+=========================================================== */
 async function translateChunk(chunk, lang) {
     const protegido = protectGlossaryTerms(chunk);
 
@@ -204,7 +269,7 @@ async function translateChunk(chunk, lang) {
     const url =
         `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encoded}`;
 
-    const res = await fetch(url);
+    const res  = await fetch(url);
     const data = await res.json();
 
     let translated = data[0].map(s => s[0]).join("");
@@ -215,23 +280,25 @@ async function translateChunk(chunk, lang) {
     return translated;
 }
 
-const sourceTextarea      = document.getElementById("sourceText");
-const translateButton     = document.getElementById("translateButton");
-const downloadAllButton   = document.getElementById("downloadAllButton");
-const messageBox          = document.getElementById("messageBox");
-const translatedResultsDiv= document.getElementById("translatedResults");
-
-let completedTranslations = {};
-
+/* ===========================================================
+   8) TRADUZIR SCRIPT COMPLETO
+=========================================================== */
 translateButton.onclick   = translateScript;
 downloadAllButton.onclick = downloadAllAsZip;
 
 async function translateScript() {
-    const text = sourceTextarea.value.trim();
-    const langs = [...document.querySelectorAll("input[type=checkbox]:checked")].map(cb => cb.value);
+    const text  = sourceTextarea.value.trim();
+    const langs = [...document.querySelectorAll("input[type=checkbox]:checked")]
+        .map(cb => cb.value);
 
-    if (!text) return messageBox.textContent = "Cole um roteiro antes.";
-    if (langs.length === 0) return messageBox.textContent = "Selecione pelo menos 1 idioma.";
+    if (!text) {
+        messageBox.textContent = "Cole um roteiro antes de traduzir.";
+        return;
+    }
+    if (langs.length === 0) {
+        messageBox.textContent = "Selecione pelo menos 1 idioma.";
+        return;
+    }
 
     messageBox.textContent = "";
     translatedResultsDiv.innerHTML =
@@ -239,6 +306,8 @@ async function translateScript() {
 
     translateButton.textContent = "EXECUTANDO...";
     translateButton.disabled = true;
+    downloadAllButton.disabled = true;
+    downloadAllButton.classList.add("opacity-60");
 
     completedTranslations = {};
 
@@ -255,9 +324,10 @@ async function translateScript() {
             </div>
         `;
 
-        const bar = document.getElementById(`pg-${lang}`);
-        const status = document.querySelector(`#out-${lang} .status`);
-        const content = document.querySelector(`#out-${lang} .content`);
+        const out     = document.getElementById(`out-${lang}`);
+        const bar     = document.getElementById(`pg-${lang}`);
+        const status  = out.querySelector(".status");
+        const content = out.querySelector(".content");
 
         let result = "";
 
@@ -277,8 +347,12 @@ async function translateScript() {
     translateButton.disabled = false;
     translateButton.textContent = "Traduzir Roteiro";
     downloadAllButton.disabled = false;
+    downloadAllButton.classList.remove("opacity-60");
 }
 
+/* ===========================================================
+   9) GERAR ZIP
+=========================================================== */
 async function downloadAllAsZip() {
     downloadAllButton.textContent = "Gerando ZIP...";
     downloadAllButton.disabled = true;
